@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import base64
 import argparse
 from datetime import datetime, timedelta, UTC
@@ -6,6 +7,7 @@ from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.x509.oid import NameOID
 from cryptography.hazmat.backends import default_backend
+
 
 def build_name(args):
     attributes = []
@@ -16,12 +18,15 @@ def build_name(args):
     if args.OU: attributes.append(x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, args.OU))
     if args.CN: attributes.append(x509.NameAttribute(NameOID.COMMON_NAME, args.CN))
     if not attributes:
-        raise ValueError("At least one subject/issuer attribute (like --CN) must be provided")
+        return x509.Name([
+            x509.NameAttribute(NameOID.COMMON_NAME, u"QKD-ED25519")
+        ])
     return x509.Name(attributes)
 
-def generate_cert(private_key, public_key, filename_prefix, subject, is_ed25519=False):
+
+def generate_cert(private_key, public_key, filename_prefix, subject, timedelta_days, is_ed25519=False):
     builder = x509.CertificateBuilder().subject_name(subject).issuer_name(subject).public_key(public_key).serial_number(
-        x509.random_serial_number()).not_valid_before(datetime.now(UTC)).not_valid_after(datetime.now(UTC) + timedelta(days=365))
+        x509.random_serial_number()).not_valid_before(datetime.now(UTC)).not_valid_after(datetime.now(UTC) + timedelta(days=timedelta_days))
     certificate = builder.sign(
         private_key=private_key,
         algorithm=None if is_ed25519 else hashes.SHA256(),
@@ -43,7 +48,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--key', action='append', required=True, help="Base64-encoded QKD key (can be used multiple times)")
     parser.add_argument('--prefix', default='qkd_ed25519', help="Filename prefix for cert and key")
-
+    parser.add_argument('--days', default=365, help = "Certificate validity in days.")
     # Subject/issuer fields
     parser.add_argument('--C', help="Country Name (e.g., RO)")
     parser.add_argument('--ST', help="State or Province Name")
@@ -51,6 +56,7 @@ if __name__ == '__main__':
     parser.add_argument('--O', help="Organization Name")
     parser.add_argument('--OU', help="Organizational Unit Name")
     parser.add_argument('--CN', help="Common Name")
+
 
     args = parser.parse_args()
 
@@ -65,4 +71,5 @@ if __name__ == '__main__':
     ed25519_seed = entropy[:32]
     ed25519_private_key = ed25519.Ed25519PrivateKey.from_private_bytes(ed25519_seed)
 
-    generate_cert(ed25519_private_key, ed25519_private_key.public_key(), args.prefix, subject, is_ed25519=True)
+    generate_cert(ed25519_private_key, ed25519_private_key.public_key(), args.prefix, subject,
+                  timedelta_days=int(args.days), is_ed25519=True)
