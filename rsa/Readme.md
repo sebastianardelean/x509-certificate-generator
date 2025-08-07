@@ -20,12 +20,6 @@ Example:
 python get_bytes.py --cert certificate.pem --key ronaqci-key.pem --password uptpassword --url https://172.24.162.133/api/v1/keys/CONS_TIM_UVT/enc_keys --output bytestream.bin --count 50
 ```
 
-6. Feed the entropy using rngd by running the command: sudo /sbin/rng --rng-device output.bin
-
-
-## Generate the certificates
-
-1. Create RSA key: `openssl genpkey -algorithm RSA -out outkey.key -pkeyopt rsa_keygen_bits:4096`
-2. Create CSR: `openssl req -new -sha256 -key outkey.key -out outcsr.csr`
-3. Create X.509 certificate: `openssl req -x509 -sha256 -nodes -newkey rsa:4096 -keyout outkey.key -days 365 -out certificate.pem`
+6. Feed the entropy using [rngd](https://wiki.networksecuritytoolkit.org/nstwiki/index.php?title=HowTo_Fix_The_rngd.service) by running the command: `sudo /sbin/rngd --rng-device output.bin`. 
+7. Create X.509 certificate: `openssl req -x509 -sha256 -nodes -newkey rsa:4096 -keyout outkey.key -days 365 -out certificate.pem`
 
